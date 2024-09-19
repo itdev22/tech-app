@@ -1,0 +1,38 @@
+version: '3'
+services:
+  # web:
+  #   image: "nginx:latest"
+  #   ports:
+  #     - "8080:80"
+  mongo:
+    image: mongo:6
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - 27017:27017
+    volumes:
+      # - ./data:/data/db
+      - ./docker/replica.key:/data/replica.key
+      - ./docker/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    command: "mongod --replSet rs0 --bind_ip_all --keyFile /data/replica.key"
+  app:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    links:
+      - mongo
+    command: "yarn start"
+    environment:
+      DATABASE_URL: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/youapp?retryWrites=true&replicaSet=rs0&w=majority&authSource=admin"
+
+# MUST RUN
+# mongosh -u youapp -p qH4KR44iiscNcO --authenticationDatabase admin
+# rs.initiate({ _id: "rs0", members: [ { _id: 0, host: "127.0.0.1:27017" }, { _id: 1, host: "mongo:27017" } ] })
+# rs.conf()
+# rs.status()
+
+
+
